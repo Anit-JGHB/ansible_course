@@ -28,8 +28,16 @@
         name:
           - apache2
           - libapache2-mod-php
-      when: ansible_distribution == "Ubuntu"      
-       
+      when: ansible_distribution == "Ubuntu"     
+
+    - name: copy html file for site
+      tags: apache,ubuntu
+      ansible.builtin.copy:
+        src: default_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: 0644  
 
 - hosts: db_servers
   become: false
@@ -39,4 +47,21 @@
       ansible.builtin.dnf:
         name: mariadb
         state: latest
-      when: ansible_distribution == "Fedora"    
+      when: ansible_distribution == "Fedora"   
+
+
+    - name: change email address for admin
+      tags: apache,fedora
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: "^ServerAdmin"
+        line: ServerAdmin somebody@somewhere.net
+        when: ansible_distribution == "Fedora"
+        register: altered_httpd
+
+    - name: restart httpd (Fedora)
+      tags: apache, fedora
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+      when: altered_httpd.changed    
